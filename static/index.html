@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>CryptoBears front-end</title>
+    <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script language="javascript" type="text/javascript" src="web3.min.js"></script>
+    <script language="javascript" type="text/javascript" src="cryptobears_abi.js"></script>
+  </head>
+  <body>
+    <div id="txStatus"></div>
+    <div id="bears"></div>
+
+    <script>
+      var cryptoBears;
+      var userAccount;
+
+      function startApp() {
+        var cryptoBearsAddress = "YOUR_CONTRACT_ADDRESS";
+        cryptoBears = new web3js.eth.Contract(cryptoBearsABI, cryptoBearsAddress);
+
+        var accountInterval = setInterval(function() {
+          // Check if account has changed
+          if (web3.eth.accounts[0] !== userAccount) {
+            userAccount = web3.eth.accounts[0];
+            // Call a function to update the UI with the new account
+            getBearsByOwner(userAccount)
+            .then(displayBears);
+          }
+        }, 100);
+
+        // Use `filter` to only fire this code when `_to` equals `userAccount`
+        cryptoBears.events.Transfer({ filter: { _to: userAccount } })
+        .on("data", function(event) {
+            let data = event.returnValues;
+            // The current user just received a bear!
+            getBearsByOwner(userAccount).then(displayBears);
+        }).on("error", console.error);
+      }
+
+      function displayBears(ids) {
+        $("#bears").empty();
+        for (id of ids) {
+          // Look up bear details from our contract. Returns a `bear` object
+          getBearDetails(id)
+          .then(function(bear) {
+            // Using ES6's "template literals" to inject variables into the HTML.
+            // Append each one to our #bears div
+            $("#bears").append(`<div class="bear">
+              <ul>
+                <li>Name: ${bear.name}</li>
+                <li>DNA: ${bear.dna}</li>
+                <li>Level: ${bear.level}</li>
+                <li>Wins: ${bear.winCount}</li>
+                <li>Losses: ${bear.lossCount}</li>
+                <li>Ready Time: ${bear.readyTime}</li>
+              </ul>
+            </div>`);
+          });
+        }
+      }
+
+      function createRandomBear(name) {
+        // This is going to take a while, so update the UI to let the user know
+        // the transaction has been sent
+        $("#txStatus").text("Creating new bear on the blockchain. This may take a while...");
+        // Send the tx to our contract:
+        return cryptoBears.methods.createRandomBear(name)
+        .send({ from: userAccount })
+        .on("receipt", function(receipt) {
+          $("#txStatus").text("Successfully created " + name + "!");
+          // Transaction was accepted into the blockchain, let's redraw the UI
+          getBearsByOwner(userAccount).then(displayBears);
+        })
+        .on("error", function(error) {
+          // Do something to alert the user their transaction has failed
+          $("#txStatus").text(error);
+        });
+      }
+
+      function feedOnKitty(bearId, kittyId) {
+        $("#txStatus").text("Eating a kitty. This may take a while...");
+        return cryptoBears.methods.feedOnKitty(bearId, kittyId)
+        .send({ from: userAccount })
+        .on("receipt", function(receipt) {
+          $("#txStatus").text("Ate a kitty and spawned a new Bear!");
+          getBearsByOwner(userAccount).then(displayBears);
+        })
+        .on("error", function(error) {
+          $("#txStatus").text(error);
+        });
+      }
+
+      function levelUp(bearId) {
+        $("#txStatus").text("Leveling up your bear...");
+        return cryptoBears.methods.levelUp(bearId)
+        .send({ from: userAccount, value: web3.utils.toWei("0.001", "ether") })
+        .on("receipt", function(receipt) {
+          $("#txStatus").text("Power overwhelming! Bear successfully leveled up");
+        })
+        .on("error", function(error) {
+          $("#txStatus").text(error);
+        });
+      }
+
+      function getBearDetails(id) {
+        return cryptoBears.methods.bears(id).call()
+      }
+
+      function bearToOwner(id) {
+        return cryptoBears.methods.bearToOwner(id).call()
+      }
+
+      function getBearsByOwner(owner) {
+        return cryptoBears.methods.getBearsByOwner(owner).call()
+      }
+
+      window.addEventListener('load', function() {
+
+        // Checking if Web3 has been injected by the browser (Mist/MetaMask)
+        if (typeof web3 !== 'undefined') {
+          // Use Mist/MetaMask's provider
+          web3js = new Web3(web3.currentProvider);
+        } else {
+          // Handle the case where the user doesn't have Metamask installed
+          // Probably show them a message prompting them to install Metamask
+        }
+
+        // Now you can start your app & access web3 freely:
+        startApp()
+
+      })
+    </script>
+  </body>
+</html>
