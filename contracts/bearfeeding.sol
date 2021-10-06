@@ -1,9 +1,10 @@
-pragma solidity >=0.8.0 <0.9.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
 
 import "./bearfactory.sol";
 
-contract KittyInterface {
-  function getKitty(uint256 _id) external view returns (
+abstract contract KittyInterface {
+  function getKitty(uint256 _id) virtual external view returns (
     bool isGestating,
     bool isReady,
     uint256 cooldownIndex,
@@ -31,11 +32,11 @@ contract BearFeeding is BearFactory {
   }
 
   function _triggerCooldown(Bear storage _bear) internal {
-    _bear.readyTime = uint32(now + cooldownTime);
+    _bear.readyTime = uint32(block.timestamp + cooldownTime);
   }
 
   function _isReady(Bear storage _bear) internal view returns (bool) {
-      return (_bear.readyTime <= now);
+      return (_bear.readyTime <= block.timestamp);
   }
 
   function feedAndMultiply(uint _bearId, uint _targetDna, string memory _species) internal onlyOwnerOf(_bearId) {

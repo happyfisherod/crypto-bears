@@ -1,13 +1,9 @@
-pragma solidity >=0.8.0 <0.9.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
 
 import "./ownable.sol";
-import "./safemath.sol";
 
 contract BearFactory is Ownable {
-
-  using SafeMath for uint256;
-  using SafeMath32 for uint32;
-  using SafeMath16 for uint16;
 
   event NewBear(uint bearId, string name, uint dna);
 
@@ -30,9 +26,10 @@ contract BearFactory is Ownable {
   mapping (address => uint) ownerBearCount;
 
   function _createBear(string memory _name, uint _dna) internal {
-    uint id = bears.push(Bear(_name, _dna, 1, uint32(now + cooldownTime), 0, 0)) - 1;
+    bears.push(Bear(_name, _dna, 1, uint32(block.timestamp + cooldownTime), 0, 0));
+    uint id = bears.length - 1;
     bearToOwner[id] = msg.sender;
-    ownerBearCount[msg.sender] = ownerBearCount[msg.sender].add(1);
+    ownerBearCount[msg.sender]++;
     emit NewBear(id, _name, _dna);
   }
 
