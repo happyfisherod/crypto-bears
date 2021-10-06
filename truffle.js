@@ -1,48 +1,53 @@
+// Initialize HDWalletProvider
 const HDWalletProvider = require("truffle-hdwallet-provider");
-const LoomTruffleProvider = require('loom-truffle-provider');
-const mnemonic = "YOUR MNEMONIC HERE";
+
+const { readFileSync } = require('fs')
+const path = require('path')
+const { join } = require('path')
+
+
+// Set your own mnemonic here
+const mnemonic = "YOUR_MNEMONIC";
+
+function getLoomProviderWithPrivateKey (privateKeyPath, chainId, writeUrl, readUrl) {
+  const privateKey = readFileSync(privateKeyPath, 'utf-8');
+  return new LoomTruffleProvider(chainId, writeUrl, readUrl, privateKey);
+}
+
+// Module exports to make this configuration available to Truffle itself
 module.exports = {
-    // Object with configuration for each network
-    networks: {
-        //development
-        development: {
-            host: "127.0.0.1",
-            port: 7545,
-            network_id: "*",
-            gas: 9500000
-        },
-        // Configuration for Ethereum Mainnet
-        mainnet: {
-            provider: function() {
-                return new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/<YOUR_INFURA_API_KEY>")
-            },
-            network_id: "1" // Match any network id
-        },
-        // Configuration for Rinkeby Metwork
-        rinkeby: {
-            provider: function() {
-                // Setting the provider with the Infura Rinkeby address and Token
-                return new HDWalletProvider(mnemonic, "https://rinkeby.infura.io/v3/<YOUR_INFURA_API_KEY>")
-            },
-            network_id: 4
-        },
-        // Configuration for Loom Testnet
-        loom_testnet: {
-            provider: function() {
-                const privateKey = 'YOUR_PRIVATE_KEY';
-                const chainId = 'extdev-plasma-us1';
-                const writeUrl = 'wss://extdev-basechain-us1.dappchains.com/websocket';
-                const readUrl = 'wss://extdev-basechain-us1.dappchains.com/queryws';
-                const loomTruffleProvider = new LoomTruffleProvider(chainId, writeUrl, readUrl, privateKey);
-                loomTruffleProvider.createExtraAccountsFromMnemonic(mnemonic, 10);
-                return loomTruffleProvider;
-            },
-            network_id: '9545242630824'
-        }
+  // Object with configuration for each network
+  networks: {
+    // Configuration for mainnet
+    mainnet: {
+      provider: function () {
+        // Setting the provider with the Infura Rinkeby address and Token
+        return new HDWalletProvider(mnemonic, "https://mainnet.infura.io/v3/YOUR_TOKEN")
+      },
+      network_id: "1"
     },
-    compilers: {
-        solc: {
-            version: "0.4.25"
-        }
+    // Configuration for rinkeby network
+    rinkeby: {
+      // Special function to setup the provider
+      provider: function () {
+        // Setting the provider with the Infura Rinkeby address and Token
+        return new HDWalletProvider(mnemonic, "https://rinkeby.infura.io/v3/YOUR_TOKEN")
+      },
+      // Network id is 4 for Rinkeby
+      network_id: 4
+    },
+
+    basechain: {
+      provider: function() {
+        const chainId = 'default';
+        const writeUrl = 'http://basechain.dappchains.com/rpc';
+        const readUrl = 'http://basechain.dappchains.com/query';
+        return new LoomTruffleProvider(chainId, writeUrl, readUrl, privateKey);
+        const privateKeyPath = path.join(__dirname, 'mainnet_private_key');
+        const loomTruffleProvider = getLoomProviderWithPrivateKey(privateKeyPath, chainId, writeUrl, readUrl);
+        return loomTruffleProvider;
+        },
+      network_id: '*'
     }
+  }
 };
